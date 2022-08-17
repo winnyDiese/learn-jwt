@@ -25,6 +25,35 @@ const generateAccessToken = user =>{
     return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1800s'})
 }
 
+const generateRefreshToken = user =>{
+    return jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '1y'})
+}
+
+// Route rafrechir Token
+app.get('/api/refreshToken', (req, res)=>{
+    const authorization = req.header('authorization')
+    const token = authorization && authorization.split(' ')[1] // 'Berear token'
+
+    if(!token){
+        return res.sendStatus(401)
+    }
+
+    jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, (err, user)=>{
+        if(err) return res.sendStatus(401)
+        
+        // Todo check a Bdd, si le user a toujours le droit, et qu'il existe toujours
+
+        delete user.iat
+        delete user.exp
+        const refreshToken = generateAccessToken(user)
+
+        res.send({
+            accessToken: refreshToken
+        })
+    })
+
+})
+
 
 // Route Login
 app.post('/api/login/', (req, res)=>{
@@ -42,7 +71,8 @@ app.post('/api/login/', (req, res)=>{
 
     // Generate a token
     const accessToken = generateAccessToken(user)
-    res.send({accessToken})
+    const refreshToken = generateRefreshToken(user)
+    res.send({accessToken, refreshToken})
 
 })
 
